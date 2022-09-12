@@ -38,4 +38,4 @@ out/
 #logs
 logs
 #application properties
-application.properties.xml
+application.properties
