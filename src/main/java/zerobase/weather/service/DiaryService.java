@@ -4,11 +4,14 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import zerobase.weather.WeatherApplication;
 import zerobase.weather.domain.DateWeather;
 import zerobase.weather.domain.Diary;
 import zerobase.weather.repository.JpaDiaryRepository;
@@ -33,6 +36,7 @@ public class DiaryService {
     @Value("${openweathermap.key}")
     private String apiKey;
 
+    private static final Logger logger = LoggerFactory.getLogger(WeatherApplication.class);
     public DiaryService(JpaDiaryRepository jpaDiaryRepository, JpaWeatherRepository jpaWeatherRepository) {
         this.jpaDiaryRepository = jpaDiaryRepository;
         this.jpaWeatherRepository = jpaWeatherRepository;
@@ -44,20 +48,15 @@ public class DiaryService {
     }
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void createDiary(LocalDate date, String text) {
-
+        logger.info("Started to create diary");
         DateWeather dateWeather = getDateWeather(date);
-
-
-
-
-
-
 //put into database
         Diary diary = new Diary();
         diary.setDateWeather(dateWeather);
         diary.setText(text);
         diary.setDate(date);
         jpaDiaryRepository.save(diary);
+        logger.info("End to create diary");
     }
 
     private DateWeather getDateWeather(LocalDate date) {
@@ -93,6 +92,7 @@ public class DiaryService {
             return response.toString();
 
         } catch (Exception e) {
+            logger.error("getWeatherString error", e.getMessage());
             return "Failed to get resposne";
         }
 
@@ -105,6 +105,7 @@ public class DiaryService {
         try {
             jsonObject = (JSONObject) jsonParser.parse(jsonString);
         } catch (ParseException e) {
+            logger.error("ParseWeather Error: ", e.getMessage());
             throw new RuntimeException(e);
         }
         Map<String, Object> resultMap = new HashMap<>();
@@ -118,7 +119,10 @@ public class DiaryService {
     }
 
     public List<Diary> readDiary(LocalDate date) {
+        logger.debug("Read Diary");
         return jpaDiaryRepository.findAllByDate(date);
+
+
     }
 
     public List<Diary> readDiaries(LocalDate startDate, LocalDate endDate) {
@@ -127,9 +131,11 @@ public class DiaryService {
 
     @Transactional(readOnly = false)
     public void updateDiary(LocalDate date, String text) {
+        logger.info("updateDiary");
         Diary nowDiary = jpaDiaryRepository.getFirstByDate(date);
         nowDiary.setText(text);
         jpaDiaryRepository.save(nowDiary);
+        logger.info("Updatediary end");
     }
 
     public void deleteDiary(LocalDate date) {
